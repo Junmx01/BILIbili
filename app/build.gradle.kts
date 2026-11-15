@@ -25,7 +25,7 @@ android {
     }
     signingConfigs.getByName("debug") {
         storeFile = file(providers.environmentVariable("BILIPLAY_DEVELOPMENT_KEYSTORE").orElse(
-            "${System.getProperty("user.home")}/.biliplay-android-signing/development/debug.jks"
+            "${System.getProperty("user.home")}/.android/debug.keystore"
         ).get())
     }
     buildTypes { release { isMinifyEnabled = true; isShrinkResources = true; proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro") } }

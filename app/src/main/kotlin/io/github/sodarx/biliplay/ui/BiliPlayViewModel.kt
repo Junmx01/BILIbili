@@ -892,6 +892,10 @@ class BiliPlayViewModel(application: Application) : AndroidViewModel(application
         tracks.firstOrNull()?.let { requestPlay(it, tracks, false, origin) }
     }
 
+    fun playFrom(track: Track, tracks: List<Track>, origin: PlaybackOrigin? = contextOrigin()) {
+        requestPlay(track, tracks, false, origin)
+    }
+
     fun toggle() {
         launch {
             connection.ready()

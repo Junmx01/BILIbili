@@ -52,6 +52,23 @@ internal fun DownloadsScreen(s: AppState, m: BiliPlayViewModel) {
                 .distinctBy {
                     if (it.status == "complete") it.track.bvid + ":" + it.track.page else it.id
                 }
+        if (!s.downloadTasks && rows.isNotEmpty()) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                FilledTonalButton(onClick = { m.playAll(rows.map { it.track }) }) {
+                    Icon(Icons.Filled.PlayArrow, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("播放全部")
+                }
+                OutlinedButton(onClick = { m.playAll(rows.map { it.track }.shuffled()) }) {
+                    Icon(Icons.Filled.Shuffle, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("随机播放")
+                }
+            }
+        }
         LazyColumn {
             items(rows, key = { it.id }) { entry ->
                 val selecting = s.selectedDownloads.isNotEmpty()
@@ -59,7 +76,8 @@ internal fun DownloadsScreen(s: AppState, m: BiliPlayViewModel) {
                     ListItem(
                         onClick = {
                             if (selecting) m.selectDownload(entry.id)
-                            else if (entry.status == "complete") m.play(entry.track)
+                            else if (entry.status == "complete")
+                                m.playFrom(entry.track, rows.map { it.track })
                             else m.retryDownload(entry)
                         },
                         onLongClick = { m.selectDownload(entry.id) },

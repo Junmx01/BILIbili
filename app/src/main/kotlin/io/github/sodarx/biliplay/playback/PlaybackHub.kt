@@ -296,12 +296,10 @@ class PlaybackHub(private val repository: AppRepository) {
                 candidates =
                     if (local != null) emptyList()
                     else (listOf(sources.first().url) + sources.first().backups).distinct()
-                currentMime = if (local != null) "audio/mpeg" else sources.first().mime
                 val uri = local?.uri ?: candidates.first()
-                p.setMediaItem(
-                    item(resolved, uri, if (local != null) "audio/mpeg" else sources.first().mime),
-                    start,
-                )
+                currentMime =
+                    if (local != null) DownloadNames.mimeOf(uri) else sources.first().mime
+                p.setMediaItem(item(resolved, uri, currentMime), start)
                 p.prepare()
                 p.setPlaybackSpeed(state.value.speed)
                 p.play()

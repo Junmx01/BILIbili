@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Environment
 import androidx.core.content.FileProvider
+import io.github.sodarx.biliplay.core.DownloadNames
 import io.github.sodarx.biliplay.data.DownloadEntry
 import io.github.sodarx.biliplay.data.validProfile
 import java.io.File
@@ -31,13 +32,14 @@ object DownloadInterop {
                 }
                 else -> error("下载文件不可用")
             }
+        val mime = DownloadNames.mimeOf(entry.uri)
         val intent =
             Intent(if (share) Intent.ACTION_SEND else Intent.ACTION_VIEW).apply {
                 if (share) {
-                    type = "audio/mpeg"
+                    type = mime
                     putExtra(Intent.EXTRA_STREAM, uri)
                     putExtra(Intent.EXTRA_TITLE, entry.track.title)
-                } else setDataAndType(uri, "audio/mpeg")
+                } else setDataAndType(uri, mime)
                 clipData = ClipData.newRawUri(entry.track.title, uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }

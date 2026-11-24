@@ -80,6 +80,15 @@ class MaintenanceRegressionTest {
     }
 
     @Test
+    fun untouchedAudioKeepsItsOwnExtensionAndMimeType() {
+        assertEquals("m4a", DownloadNames.originalExtension("audio/mp4"))
+        assertEquals("flac", DownloadNames.originalExtension("audio/flac; codecs=flac"))
+        assertTrue(DownloadNames.privateFile(track, first, "m4a").endsWith("_$first.m4a"))
+        assertEquals("audio/mp4", DownloadNames.mimeOf("content://x/tree/Music%2Fa_p1.m4a"))
+        assertEquals("audio/mpeg", DownloadNames.mimeOf("file:///data/a_p1.mp3"))
+    }
+
+    @Test
     fun invalidSavedPagesCannotCreateAnInvalidFileName() {
         assertTrue(DownloadNames.privateFile(track.copy(page = -1), first).contains("_p1_"))
     }

@@ -31,7 +31,10 @@ class DownloadWorker(context: Context, parameters: WorkerParameters) :
                 }
                     .getOrNull() ?: return@withContext Result.failure()
             val bitrate = inputData.getInt("bitrate", 192000)
-            if (bitrate !in listOf(192000, 320000)) return@withContext Result.failure()
+            // 0 means "keep the original audio, no MP3 transcoding".
+            if (bitrate !in listOf(0, 192000, 320000)) return@withContext Result.failure()
+            val original = bitrate == 0
+            val downloadSpan = if (original) 95 else 65
             val temp = File(applicationContext.cacheDir, "downloads/${profile.id}/$id.source")
             temp.parentFile!!.mkdirs()
             val root =
@@ -71,7 +74,8 @@ class DownloadWorker(context: Context, parameters: WorkerParameters) :
                     ->
                     if (!isStopped && System.currentTimeMillis() - last > 700) {
                         val percent =
-                            if (total > 0) (count * 65 / total).toInt().coerceIn(0, 65) else 0
+                            if (total > 0) (count * downloadSpan / total).toInt().coerceIn(0, downloadSpan)
+                            else 0
                         update("downloading", percent)
                         setProgressAsync(workDataOf("progress" to percent))
                         last = System.currentTimeMillis()
@@ -79,21 +83,32 @@ class DownloadWorker(context: Context, parameters: WorkerParameters) :
                 }
                 ensureActive()
                 check(temp.length() > 0) { "未能下载音源" }
-                update("encoding", 65)
-                Mp3Transcoder.transcode(temp, staging, bitrate) { p ->
-                    if (System.currentTimeMillis() - last > 700) {
-                        update("encoding", 65 + p * 30 / 100)
-                        last = System.currentTimeMillis()
+                if (!original) {
+                    update("encoding", 65)
+                    Mp3Transcoder.transcode(temp, staging, bitrate) { p ->
+                        if (System.currentTimeMillis() - last > 700) {
+                            update("encoding", 65 + p * 30 / 100)
+                            last = System.currentTimeMillis()
+                        }
                     }
                 }
                 ensureActive()
-                val target = File(root, DownloadNames.privateFile(resolved, id))
-                java.nio.file.Files.move(
-                    staging.toPath(),
-                    target.toPath(),
-                    java.nio.file.StandardCopyOption.REPLACE_EXISTING,
-                    java.nio.file.StandardCopyOption.ATOMIC_MOVE,
-                )
+                val extension = if (original) DownloadNames.originalExtension(source.mime) else "mp3"
+                val target = File(root, DownloadNames.privateFile(resolved, id, extension))
+                if (original)
+                    // The cache and the music folder may be on different volumes, so no atomic move.
+                    java.nio.file.Files.move(
+                        temp.toPath(),
+                        target.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                    )
+                else
+                    java.nio.file.Files.move(
+                        staging.toPath(),
+                        target.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                        java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                    )
                 privateOutput = target
                 var uri = Uri.fromFile(target).toString()
                 var exportError = ""
@@ -103,7 +118,7 @@ class DownloadWorker(context: Context, parameters: WorkerParameters) :
                         val folder =
                             DocumentFile.fromTreeUri(applicationContext, Uri.parse(tree))
                                 ?: error("文件夹不可用")
-                        exported = folder.createFile("audio/mpeg", target.name) ?: error("无法创建文件")
+                        exported = folder.createFile(DownloadNames.mimeOf(target.name), target.name) ?: error("无法创建文件")
                         applicationContext.contentResolver
                             .openOutputStream(exported!!.uri, "w")!!
                             .use { output -> target.inputStream().use { it.copyTo(output) } }

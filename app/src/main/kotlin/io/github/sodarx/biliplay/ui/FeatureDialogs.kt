@@ -336,11 +336,16 @@ internal fun FeatureDialogs(s: AppState, m: BiliPlayViewModel, onDownload: () ->
                         )
                     }
                     HorizontalDivider()
-                    listOf(192000, 320000).forEach { bitrate ->
+                    listOf(0, 192000, 320000).forEach { bitrate ->
                         ListItem(
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             onClick = { m.downloadBitrate(bitrate) },
-                            content = { Text("MP3 · ${bitrate/1000} kbps") },
+                            content = {
+                                Text(
+                                    if (bitrate == 0) "原始音频（不转码）"
+                                    else "MP3 · ${bitrate/1000} kbps"
+                                )
+                            },
                             leadingContent = {
                                 RadioButton(
                                     s.downloadBitrate == bitrate,
@@ -349,7 +354,7 @@ internal fun FeatureDialogs(s: AppState, m: BiliPlayViewModel, onDownload: () ->
                             },
                         )
                     }
-                    if (s.downloadQuality.startsWith("Hi-Res"))
+                    if (s.downloadQuality.startsWith("Hi-Res") && s.downloadBitrate != 0)
                         Text("MP3 转码不保留无损音质", style = MaterialTheme.typography.bodySmall)
                 }
             }

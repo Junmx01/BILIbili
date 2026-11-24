@@ -1049,6 +1049,32 @@ class BiliPlayViewModel(application: Application) : AndroidViewModel(application
         )
     }
 
+    /** Queues every song of [folder] that is not downloaded (or downloading) yet. */
+    fun downloadFolder(folder: Folder) = launch { p ->
+        val all = mutableListOf<Track>()
+        var page = 1
+        do {
+            val result = p.api.folderTracks(folder.id, page++)
+            all += result.items
+            if (!result.hasMore || result.items.isEmpty()) break
+        } while (page <= 500)
+        val known = p.library.downloads()
+        val fresh =
+            all.distinctBy { it.key }
+                .filter { t ->
+                    known.none {
+                        it.track.key == t.key &&
+                            it.status in listOf("complete", "queued", "downloading", "encoding")
+                    }
+                }
+        val bitrate = state.value.downloadBitrate
+        // Hi-Res is only worth fetching when it is kept untouched; the worker falls back to
+        // the standard stream for songs that have no Hi-Res track.
+        val quality = if (p.account?.vip == true && bitrate == 0) "Hi-Res" else "标准"
+        withContext(Dispatchers.IO) { fresh.forEach { Downloads.enqueue(app, p, it, quality, bitrate) } }
+        message(if (fresh.isEmpty()) "没有需要下载的新歌曲" else "已加入 ${fresh.size} 首到下载任务")
+    }
+
     fun openFolder(folder: Folder) {
         mutable.update {
             it.copy(

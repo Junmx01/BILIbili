@@ -79,6 +79,34 @@ internal fun LargeFolderPreview(covers: List<String>, modifier: Modifier) {
 
 @Composable
 internal fun FolderScreen(s: AppState, m: BiliPlayViewModel) {
+    var confirmDownload by remember { mutableStateOf(false) }
+    val folder = s.selectedFolder
+    if (confirmDownload && folder != null) {
+        AlertDialog(
+            onDismissRequest = { confirmDownload = false },
+            title = { Text("下载整个收藏夹") },
+            text = {
+                Text(
+                    "将把“${folder.title}”（共 ${folder.count} 首）里还没下载的歌曲加入下载任务，" +
+                        "格式：" +
+                        (if (s.downloadBitrate == 0) "原始音频（不转码）"
+                        else "MP3 ${s.downloadBitrate / 1000} kbps") +
+                        "。可在“下载任务”里取消。"
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmDownload = false
+                        m.downloadFolder(folder)
+                    }
+                ) {
+                    Text("下载")
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirmDownload = false }) { Text("取消") } },
+        )
+    }
     LazyColumn {
         item {
             Row(
@@ -90,12 +118,21 @@ internal fun FolderScreen(s: AppState, m: BiliPlayViewModel) {
                     "${s.selectedFolder?.count ?: 0} 首",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                FilledTonalButton(
-                    onClick = { m.playAll(s.folderTracks) },
-                    enabled = s.folderTracks.isNotEmpty(),
-                ) {
-                    Icon(Icons.Default.PlayArrow, null)
-                    Text("播放全部")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = { confirmDownload = true },
+                        enabled = s.folderTracks.isNotEmpty(),
+                    ) {
+                        Icon(Icons.Default.Download, null)
+                        Text("下载全部")
+                    }
+                    FilledTonalButton(
+                        onClick = { m.playAll(s.folderTracks) },
+                        enabled = s.folderTracks.isNotEmpty(),
+                    ) {
+                        Icon(Icons.Default.PlayArrow, null)
+                        Text("播放全部")
+                    }
                 }
             }
         }

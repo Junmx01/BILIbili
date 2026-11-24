@@ -24,6 +24,8 @@ import io.github.sodarx.biliplay.data.DownloadEntry
 internal fun DownloadsScreen(s: AppState, m: BiliPlayViewModel) {
     val context = LocalContext.current
     var menu by remember { mutableStateOf<String?>(null) }
+    var query by remember { mutableStateOf("") }
+    var sort by remember { mutableIntStateOf(0) } // 0 = download order, 1 = title, 2 = uploader
     fun open(entry: DownloadEntry, share: Boolean) {
         menu = null
         runCatching {
@@ -44,7 +46,7 @@ internal fun DownloadsScreen(s: AppState, m: BiliPlayViewModel) {
             FilterChip(!s.downloadTasks, { m.downloadTasks(false) }, label = { Text("已下载") })
             FilterChip(s.downloadTasks, { m.downloadTasks(true) }, label = { Text("下载任务") })
         }
-        val rows =
+        val listed =
             s.downloads
                 .filter {
                     if (s.downloadTasks) it.status != "complete" else it.status == "complete"
@@ -52,6 +54,50 @@ internal fun DownloadsScreen(s: AppState, m: BiliPlayViewModel) {
                 .distinctBy {
                     if (it.status == "complete") it.track.bvid + ":" + it.track.page else it.id
                 }
+        if (!s.downloadTasks && listed.isNotEmpty()) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            ) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    placeholder = { Text("搜索已下载的歌曲") },
+                    leadingIcon = { Icon(Icons.Filled.Search, null) },
+                    trailingIcon = {
+                        if (query.isNotEmpty()) {
+                            IconButton(onClick = { query = "" }) {
+                                Icon(Icons.Filled.Close, "清除搜索")
+                            }
+                        }
+                    },
+                )
+                FilterChip(
+                    selected = sort != 0,
+                    onClick = { sort = (sort + 1) % 3 },
+                    label = { Text(listOf("默认排序", "按标题", "按 UP 主")[sort]) },
+                )
+            }
+        }
+        val rows =
+            if (s.downloadTasks) listed
+            else
+                listed
+                    .filter {
+                        query.isBlank() ||
+                            it.track.title.contains(query.trim(), ignoreCase = true) ||
+                            it.track.uploader.contains(query.trim(), ignoreCase = true)
+                    }
+                    .let { list ->
+                        when (sort) {
+                            1 -> list.sortedBy { it.track.title.lowercase() }
+                            2 -> list.sortedBy { it.track.uploader.lowercase() }
+                            else -> list
+                        }
+                    }
         if (!s.downloadTasks && rows.isNotEmpty()) {
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
@@ -173,7 +219,7 @@ internal fun DownloadsScreen(s: AppState, m: BiliPlayViewModel) {
                     }
                 }
             }
-            if (rows.isEmpty()) item { EmptyContent(if (s.downloadTasks) "暂无下载任务" else "暂无下载") }
+            if (rows.isEmpty()) item { EmptyContent(if (s.downloadTasks) "暂无下载任务" else if (query.isNotBlank()) "没有匹配的歌曲" else "暂无下载") }
         }
     }
 }

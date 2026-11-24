@@ -63,7 +63,17 @@ class BiliPlayViewModel(application: Application) : AndroidViewModel(application
     private val previewJobs = mutableSetOf<Long>()
     private val previewLimit = kotlinx.coroutines.sync.Semaphore(3)
 
+    private fun isConnected(): Boolean {
+        val network =
+            app.getSystemService(android.content.Context.CONNECTIVITY_SERVICE)
+                as android.net.ConnectivityManager
+        return network
+            .getNetworkCapabilities(network.activeNetwork)
+            ?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+    }
+
     init {
+        hub.isOffline = { !isConnected() }
         viewModelScope.launch {
             repo.profile.collect { p ->
                 profileScope.cancel()
@@ -96,6 +106,7 @@ class BiliPlayViewModel(application: Application) : AndroidViewModel(application
                                 ) == StartupStep.Login
                             )
                                 "login"
+                            else if (!isConnected()) "downloads" // offline: open the downloaded songs
                             else "home",
                         appearance = prefs,
                         profileId = p.id,
@@ -126,8 +137,9 @@ class BiliPlayViewModel(application: Application) : AndroidViewModel(application
                     }
                 }
                 if (repo.agreementAccepted() && repo.themeSetupComplete()) {
-                    if (!repo.loggedIn(p)) startLogin() else refreshHome()
-                    if (repo.loggedIn(p)) {
+                    if (!repo.loggedIn(p)) startLogin()
+                    else if (isConnected()) refreshHome()
+                    if (repo.loggedIn(p) && isConnected()) {
                         refreshAccount()
                         refreshFolders()
                     }

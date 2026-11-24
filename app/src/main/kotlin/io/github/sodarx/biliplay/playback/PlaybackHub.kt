@@ -52,6 +52,9 @@ class PlaybackHub(private val repository: AppRepository) {
 
     private val saves = Channel<Save>(Channel.UNLIMITED)
 
+    /** Set by the UI layer; when true, next/previous skip songs that are not downloaded. */
+    var isOffline: () -> Boolean = { false }
+
     init {
         scope.launch(Dispatchers.IO) {
             for ((profile, s, done) in saves) {
@@ -378,8 +381,33 @@ class PlaybackHub(private val repository: AppRepository) {
     fun next(direction: Int = 1, ended: Boolean = false) {
         val s = state.value
         val i = QueueMembership.restoredIndex(s.queue, s.current, s.queueIndex)
-        val next =
+        var next =
             QueuePolicy.nextIndex(s.queue.size, i, s.mode, ended, direction, Random.nextInt())
+        if (next != null && isOffline()) {
+            val saved =
+                repository.profile.value.library
+                    .downloads()
+                    .filter { it.status == "complete" && it.uri.isNotEmpty() }
+                    .map { it.track.bvid to it.track.page }
+                    .toSet()
+            var tries = 0
+            while (
+                next != null &&
+                    tries++ < s.queue.size &&
+                    (s.queue[next].bvid to s.queue[next].page) !in saved
+            ) {
+                next =
+                    QueuePolicy.nextIndex(
+                        s.queue.size,
+                        next,
+                        s.mode,
+                        false,
+                        direction,
+                        Random.nextInt(),
+                    )
+            }
+            if (next != null && (s.queue[next].bvid to s.queue[next].page) !in saved) next = null
+        }
         if (next == null) {
             player?.pause()
             persist()

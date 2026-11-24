@@ -111,6 +111,8 @@ data class AppState(
     val downloadTree: String = "",
     val downloadQuality: String = "标准",
     val downloadBitrate: Int = 192000,
+    /** Wall-clock time (ms) at which the sleep timer pauses playback; 0 when it is off. */
+    val sleepTimerEnd: Long = 0L,
     val downloadSources: List<AudioSource> = emptyList(),
     val dialog: String? = null,
     val actionTrack: Track? = null,

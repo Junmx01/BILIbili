@@ -353,6 +353,11 @@ class PlaybackHub(private val repository: AppRepository) {
         checkpoint()
     }
 
+    fun pause() {
+        player?.pause()
+        checkpoint()
+    }
+
     fun stop() {
         load?.cancel()
         player?.pause()

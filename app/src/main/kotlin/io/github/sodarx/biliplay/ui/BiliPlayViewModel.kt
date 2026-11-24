@@ -921,6 +921,27 @@ class BiliPlayViewModel(application: Application) : AndroidViewModel(application
 
     fun setSpeed(value: Float) = hub.speed(value)
 
+    private var sleepJob: Job? = null
+
+    /** Pauses playback after [minutes]; 0 turns the timer off. */
+    fun sleepTimer(minutes: Int) {
+        sleepJob?.cancel()
+        sleepJob = null
+        if (minutes <= 0) {
+            mutable.update { it.copy(sleepTimerEnd = 0L) }
+            return
+        }
+        val end = System.currentTimeMillis() + minutes * 60_000L
+        mutable.update { it.copy(sleepTimerEnd = end) }
+        sleepJob =
+            viewModelScope.launch {
+                delay(minutes * 60_000L)
+                hub.pause()
+                mutable.update { it.copy(sleepTimerEnd = 0L) }
+                message("睡眠定时已到，已暂停播放")
+            }
+    }
+
     fun changeQuality(index: Int) = hub.quality(index)
 
     fun next(direction: Int = 1) {

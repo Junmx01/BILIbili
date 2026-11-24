@@ -475,14 +475,45 @@ internal fun QualityDialog(state: AppState, model: BiliPlayViewModel, onDismiss:
 @Composable
 internal fun SpeedDialog(state: AppState, model: BiliPlayViewModel, onDismiss: () -> Unit) {
     val rates = listOf(.5f, .75f, 1f, 1.25f, 1.5f, 1.75f, 2f)
-    OptionsDialog(
-        "播放速度",
-        rates.map { "${it}×" },
-        rates.indexOf(state.speed),
-        {
-            model.setSpeed(rates[it])
-            onDismiss()
+    val timers = listOf(0, 15, 30, 45, 60)
+    val left =
+        if (state.sleepTimerEnd > 0)
+            ((state.sleepTimerEnd - System.currentTimeMillis()) / 60_000L + 1).coerceAtLeast(1)
+        else 0L
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("播放速度与睡眠定时") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text("播放速度", style = MaterialTheme.typography.labelLarge)
+                Row(Modifier.horizontalScroll(rememberScrollState()), Arrangement.spacedBy(8.dp)) {
+                    rates.forEach { rate ->
+                        FilterChip(
+                            selected = rate == state.speed,
+                            onClick = { model.setSpeed(rate) },
+                            label = { Text("${rate}×") },
+                        )
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    if (left > 0) "睡眠定时（还剩约 $left 分钟）" else "睡眠定时",
+                    style = MaterialTheme.typography.labelLarge,
+                )
+                Row(Modifier.horizontalScroll(rememberScrollState()), Arrangement.spacedBy(8.dp)) {
+                    timers.forEach { minutes ->
+                        FilterChip(
+                            selected = minutes == 0 && state.sleepTimerEnd == 0L,
+                            onClick = {
+                                model.sleepTimer(minutes)
+                                onDismiss()
+                            },
+                            label = { Text(if (minutes == 0) "关闭" else "${minutes} 分钟") },
+                        )
+                    }
+                }
+            }
         },
-        onDismiss,
+        confirmButton = { TextButton(onClick = onDismiss) { Text("关闭") } },
     )
 }

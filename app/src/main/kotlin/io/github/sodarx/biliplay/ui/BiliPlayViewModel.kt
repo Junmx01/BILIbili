@@ -892,8 +892,10 @@ class BiliPlayViewModel(application: Application) : AndroidViewModel(application
         tracks.firstOrNull()?.let { requestPlay(it, tracks, false, origin) }
     }
 
+    // Replaces the current queue with [tracks] and starts at [track], ignoring the click policy.
     fun playFrom(track: Track, tracks: List<Track>, origin: PlaybackOrigin? = contextOrigin()) {
-        requestPlay(track, tracks, false, origin)
+        hideContinueListening()
+        playWithPolicy(track, tracks, false, false, origin)
     }
 
     fun toggle() {

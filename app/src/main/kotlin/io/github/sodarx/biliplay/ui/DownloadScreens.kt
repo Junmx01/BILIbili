@@ -57,12 +57,22 @@ internal fun DownloadsScreen(s: AppState, m: BiliPlayViewModel) {
                 Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                FilledTonalButton(onClick = { m.playAll(rows.map { it.track }) }) {
+                FilledTonalButton(
+                    onClick = {
+                        val all = rows.map { it.track }
+                        m.playFrom(all.first(), all)
+                    }
+                ) {
                     Icon(Icons.Filled.PlayArrow, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     Text("播放全部")
                 }
-                OutlinedButton(onClick = { m.playAll(rows.map { it.track }.shuffled()) }) {
+                OutlinedButton(
+                    onClick = {
+                        val all = rows.map { it.track }.shuffled()
+                        m.playFrom(all.first(), all)
+                    }
+                ) {
                     Icon(Icons.Filled.Shuffle, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     Text("随机播放")
